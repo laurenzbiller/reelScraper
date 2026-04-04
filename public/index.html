@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Topics Dashboard</title>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 16px;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #334155;
+    }
+
+    .container {
+      padding: 12px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .topic {
+      margin-top: 20px;
+    }
+
+    .topic h2 {
+      font-size: 16px;
+      color: var(--accent);
+      margin-bottom: 10px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topic h2::before {
+      content: '▼';
+      font-size: 12px;
+      transition: transform 0.2s;
+    }
+
+    .topic.collapsed h2::before {
+      transform: rotate(-90deg);
+    }
+
+    .topic-content {
+      transition: max-height 0.2s ease-out;
+      overflow: hidden;
+    }
+
+    .topic.collapsed .topic-content {
+      max-height: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .data {
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    @media (min-width: 768px) {
+      .card {
+        padding: 18px;
+      }
+
+      .title {
+        font-size: 16px;
+      }
+    }
+
+    body {
+      overflow: auto;
+      scrollbar-width: none;
+      /* Firefox */
+    }
+
+    body::-webkit-scrollbar {
+      display: none;
+      /* Chrome, Safari */
+    }
+  </style>
+</head>
+
+<body>
+  <header>📚 Topics Dashboard</header>
+
+  <div class="container" id="app"></div>
+
+  <script>
+    const app = document.getElementById("app");
+
+    function isLink(text) {
+      return text.startsWith("http");
+    }
+
+    function formatDate(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return "heute";
+      } else if (diffDays === 1) {
+        return "gestern";
+      } else if (diffDays < 7) {
+        return `vor ${diffDays} Tagen`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `vor ${weeks} ${weeks === 1 ? 'Woche' : 'Wochen'}`;
+      } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return `vor ${months} ${months === 1 ? 'Monat' : 'Monaten'}`;
+      } else {
+        const years = Math.floor(diffDays / 365);
+        return `vor ${years} ${years === 1 ? 'Jahr' : 'Jahren'}`;
+      }
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch("/entries");
+        const data = await res.json();
+
+        render(data);
+      } catch (err) {
+        console.error("Failed to load data:", err);
+        app.textContent = "Error loading data";
+      }
+    }
+
+    function render(data) {
+      data.topics.forEach((topic, index) => {
+        const section = document.createElement("div");
+        section.className = "topic";
+        
+        // First topic expanded, others collapsed
+        if (index > 0) {
+          section.classList.add("collapsed");
+        }
+
+        const heading = document.createElement("h2");
+        heading.textContent = topic;
+        heading.addEventListener("click", () => {
+          // Close all other topics
+          document.querySelectorAll(".topic").forEach(otherTopic => {
+            if (otherTopic !== section) {
+              otherTopic.classList.add("collapsed");
+            }
+          });
+          // Toggle current topic
+          section.classList.toggle("collapsed");
+        });
+
+        section.appendChild(heading);
+
+        const content = document.createElement("div");
+        content.className = "topic-content";
+
+        data.entries
+          .filter(entry => entry.topic === topic)
+          .sort((a, b) => b.timestamp - a.timestamp) // newest first
+          .forEach(entry => {
+            const card = document.createElement("div");
+            card.className = "card";
+
+            const title = document.createElement("div");
+            title.className = "title";
+            title.textContent = entry.title;
+
+            const meta = document.createElement("div");
+            meta.className = "meta";
+            meta.innerHTML = `${entry.type.toUpperCase()} • ${formatDate(entry.timestamp)}`;
+
+            const content_div = document.createElement("div");
+            content_div.className = "data";
+
+            if (isLink(entry.data)) {
+              const a = document.createElement("a");
+              a.href = entry.data;
+              a.target = "_blank";
+              a.textContent = entry.data;
+              content_div.appendChild(a);
+            } else {
+              const text = document.createElement("div");
+
+              // 👉 Convert links inside the text into <a> tags
+              const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+              text.innerHTML = entry.data.replace(urlRegex, (url) => {
+                return `<a href="${url}" target="_blank">${url}</a>`;
+              });
+
+              content_div.appendChild(text);
+
+              // 👉 Add Google Maps button for "place"
+              if (entry.type === "place") {
+                const mapLink = document.createElement("a");
+
+                const query = encodeURIComponent(entry.data);
+                mapLink.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                mapLink.target = "_blank";
+
+                // 👉 Pill button styling
+                mapLink.style.display = "inline-flex";
+                mapLink.style.alignItems = "center";
+                mapLink.style.gap = "6px";
+                mapLink.style.marginTop = "8px";
+                mapLink.style.padding = "6px 10px";
+                mapLink.style.borderRadius = "999px";
+                mapLink.style.border = "1px solid #334155";
+                mapLink.style.color = "var(--accent)";
+                mapLink.style.fontSize = "12px";
+                mapLink.style.cursor = "pointer";
+                mapLink.style.textDecoration = "none";
+
+                mapLink.textContent = "📍 Open in Maps";
+
+                content_div.appendChild(mapLink);
+              }
+            }
+
+            card.appendChild(title);
+            card.appendChild(meta);
+            card.appendChild(content_div);
+            content.appendChild(card);
+          });
+
+        section.appendChild(content);
+        app.appendChild(section);
+      });
+    }
+
+    loadData();
+  </script>
+</body>
+
+</html>
