@@ -132,7 +132,7 @@
     const app = document.getElementById("app");
 
     function isLink(text) {
-      return text.startsWith("http");
+      return typeof text === "string" && text.startsWith("http");
     }
 
     function formatDate(timestamp) {
@@ -164,6 +164,7 @@
         const res = await fetch("/entries");
         const data = await res.json();
 
+        console.log(data);
         render(data);
       } catch (err) {
         console.error("Failed to load data:", err);
@@ -226,16 +227,16 @@
             } else {
               const text = document.createElement("div");
 
-              // 👉 Convert links inside the text into <a> tags
+              // Convert links inside the text into <a> tags
               const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-              text.innerHTML = entry.data.replace(urlRegex, (url) => {
+              text.innerHTML = typeof entry.data === "string" ? entry.data.replace(urlRegex, (url) => {
                 return `<a href="${url}" target="_blank">${url}</a>`;
-              });
+              }) : entry.data;
 
               content_div.appendChild(text);
 
-              // 👉 Add Google Maps button for "place"
+              // Add Google Maps button for "place"
               if (entry.type === "place") {
                 const mapLink = document.createElement("a");
 
