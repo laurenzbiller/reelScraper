@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import 'dotenv/config';
 import OpenAI from "openai";
 import fs from "fs";
+import { CreateEntityDto } from "../types/index.ts";
 
 // The client gets the API key from the environment variable `GEMINI_API_KEY`.
 const googleai = new GoogleGenAI({});
@@ -29,24 +30,50 @@ async function prompt(promptString: string) {
     }
 }
 
-// : Promise<CreateEntityDto>
+function extractJSON(text: string): string {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("No JSON found");
+
+  return JSON.parse(match[0]);
+}
+
+function cleanResponse(text: string): string {
+  return text
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+}
+
 export const llmService = {
-    async processInformation(description: string, topics: Array<string>, transcription: string) {
+    async processInformation(description: string, topics: Array<string>, transcription: string): Promise<CreateEntityDto> {
         const resp = await prompt(`
 You are a data extraction system. Output only valid JSON, no other text.
 
-- topic_action: "add_to_existing" if topic matches one below, else "new_topic"
-- topic: general topic (match existing if possible)
-- title: concise title
-- type: place | website | movie | tvshow | tool | tips | information | other
-- data: a markdown string that capture valuable information from the content.
-  Extract whatever is most useful given the type (e.g. tips, steps, url, address, tools, people, dates, prices — anything relevant).
-  Only include fields that have actual content. Be thorough.
+{
+  "title": "concise title",
+  "topic": "general topic (match existing if possible)",
+  "topic_action": "add_to_existing" | "new_topic",
+  "type": "place" | "website" | "movie" | "tvshow" | "tool" | "tips" | "information" | "other",
+  "source": {
+    "platform": "instagram",
+    "author": "username/creator if mentioned",
+  },
+  "data": {
+    // extract any fields that capture valuable information
+    // adapt to the type — be thorough, only include what has actual content
+  }
+}
 
+Existing topics: ${JSON.stringify(topics)}
+Description: ${description}
+Transcription: ${transcription}
 Existing topics: ${JSON.stringify(topics)}
 Content: ${description}
 Transcription: ${transcription}`.trim());
         console.log(resp);
+        const cleanedResp: string = cleanResponse(resp!);
+        const jsonResp = extractJSON(cleanedResp);
+        return CreateEntityDto.fromJSON(jsonResp);
     },
 
     async transcribeWhisper(file: string): Promise<string> {

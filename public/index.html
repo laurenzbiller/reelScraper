@@ -1,281 +1,512 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Topics Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knowledge Base</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0e;
+    --surface: #141416;
+    --border: #222226;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+    --tag-bg: #1a1a1e;
+    --pad: 16px;
+  }
 
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    /* safe area for notched phones */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* HEADER — mobile first */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px var(--pad);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  #count {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* FILTERS — horizontal scroll on mobile */
+  .filters {
+    padding: 12px var(--pad);
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filters::-webkit-scrollbar { display: none; }
+
+  .filter-btn {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 7px 13px;
+    border-radius: 2px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    /* bigger touch target */
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .filter-btn:active, .filter-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  /* TOPIC GROUP */
+  .topic-group {
+    padding: 24px var(--pad) 0;
+  }
+
+  .topic-heading {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .topic-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* GRID — single column mobile, multi on desktop */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding-bottom: 24px;
+  }
+
+  #main-content { padding-bottom: 40px; }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: fadeUp 0.35s ease forwards;
+    /* no hover lift on mobile — use active instead */
+    transition: border-color 0.15s;
+    cursor: default;
+  }
+
+  .card:active { border-color: #3a3a3a; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--text);
+  }
+
+  .type-badge {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.6;
+  }
+
+  .type-place       { background: #1a2a1a; color: #7ddb7d; border: 1px solid #2a4a2a; }
+  .type-website     { background: #1a1a2a; color: #7d9dff; border: 1px solid #2a2a4a; }
+  .type-tips        { background: #2a2a1a; color: var(--accent); border: 1px solid #3a3a1a; }
+  .type-information { background: #2a1a1a; color: #ff9d7d; border: 1px solid #4a2a1a; }
+  .type-tool        { background: #1a2a2a; color: #7ddbdb; border: 1px solid #2a4a4a; }
+  .type-movie       { background: #2a1a2a; color: #db7ddb; border: 1px solid #4a2a4a; }
+  .type-tvshow      { background: #2a1a2a; color: #db7ddb; border: 1px solid #4a2a4a; }
+  .type-other       { background: #1e1e1e; color: #999; border: 1px solid #333; }
+
+  /* DATA FIELDS — stacked on mobile */
+  .data-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .data-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+  }
+
+  .data-key {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 10px;
+  }
+
+  .data-val {
+    color: #ccc;
+    line-height: 1.55;
+  }
+
+  .data-val a {
+    color: var(--accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+
+  .data-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .data-list li {
+    color: #ccc;
+    padding-left: 14px;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .data-list li::before {
+    content: '—';
+    color: var(--accent);
+    position: absolute;
+    left: 0;
+  }
+
+  /* CARD FOOTER */
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .timestamp {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .source-link {
+    font-size: 10px;
+    color: var(--muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+    min-height: 32px;
+  }
+
+  .source-link:active { color: var(--accent); }
+
+  /* LOADING / EMPTY / ERROR */
+  .state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg { color: var(--accent2); text-align: center; }
+
+  /* DESKTOP — upgrade layout at 640px+ */
+  @media (min-width: 640px) {
+    :root { --pad: 28px; }
+
+    header { padding: 18px var(--pad); }
+    .logo { font-size: 18px; }
+
+    .filters { padding: 16px var(--pad); flex-wrap: wrap; overflow-x: visible; }
+    .filter-btn { font-size: 11px; }
+    .filter-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+
+    .topic-group { padding: 32px var(--pad) 0; }
+    .topic-heading { font-size: 11px; }
+
+    .grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+
+    .card { padding: 22px; }
+    .card:hover { border-color: #333; transform: translateY(-2px); transition: border-color 0.2s, transform 0.2s; }
+    .card-title { font-size: 15px; }
+
+    .data-row {
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0;
     }
 
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+    .data-key {
+      font-size: 11px;
+      min-width: 110px;
+      flex-shrink: 0;
+      padding-top: 1px;
     }
+  }
 
-    header {
-      padding: 16px;
-      font-size: 20px;
-      font-weight: 600;
-      border-bottom: 1px solid #334155;
-    }
-
-    .container {
-      padding: 12px;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-
-    .topic {
-      margin-top: 20px;
-    }
-
-    .topic h2 {
-      font-size: 16px;
-      color: var(--accent);
-      margin-bottom: 10px;
-      cursor: pointer;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .topic h2::before {
-      content: '▼';
-      font-size: 12px;
-      transition: transform 0.2s;
-    }
-
-    .topic.collapsed h2::before {
-      transform: rotate(-90deg);
-    }
-
-    .topic-content {
-      transition: max-height 0.2s ease-out;
-      overflow: hidden;
-    }
-
-    .topic.collapsed .topic-content {
-      max-height: 0;
-    }
-
-    .card {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .title {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    .meta {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .data {
-      font-size: 13px;
-      line-height: 1.4;
-      word-break: break-word;
-    }
-
-    a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    @media (min-width: 768px) {
-      .card {
-        padding: 18px;
-      }
-
-      .title {
-        font-size: 16px;
-      }
-    }
-
-    body {
-      overflow: auto;
-      scrollbar-width: none;
-      /* Firefox */
-    }
-
-    body::-webkit-scrollbar {
-      display: none;
-      /* Chrome, Safari */
-    }
-  </style>
+  @media (min-width: 1024px) {
+    :root { --pad: 40px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+  }
+</style>
 </head>
-
 <body>
-  <header>📚 Topics Dashboard</header>
 
-  <div class="container" id="app"></div>
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Knowledge Base
+  </div>
+  <div class="header-right">
+    <span id="count"></span>
+  </div>
+</header>
 
-  <script>
-    const app = document.getElementById("app");
+<div class="filters" id="filters">
+  <button class="filter-btn active" data-type="all">All</button>
+</div>
 
-    function isLink(text) {
-      return typeof text === "string" && text.startsWith("http");
+<div id="main-content">
+  <div class="state" style="padding:80px 20px"><div class="spinner"></div><span>Loading entries...</span></div>
+</div>
+
+<script>
+  let allEntries = [];
+  let activeFilter = 'all';
+
+  async function loadEntries() {
+    try {
+      const res = await fetch('/entries');
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const json = await res.json();
+
+      allEntries = Array.isArray(json) ? json : (json.entries ?? Object.values(json));
+
+      buildFilters();
+      render();
+    } catch (err) {
+      document.getElementById('main-content').innerHTML =
+        `<div class="state"><span class="error-msg">Failed to load: ${err.message}</span></div>`;
+    }
+  }
+
+  function buildFilters() {
+    const types = ['all', ...new Set(allEntries.map(e => e.type).filter(Boolean))];
+    const container = document.getElementById('filters');
+    container.innerHTML = types.map(t =>
+      `<button class="filter-btn ${t === 'all' ? 'active' : ''}" data-type="${t}">${t}</button>`
+    ).join('');
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      activeFilter = btn.dataset.type;
+      container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+  }
+
+  function render() {
+    const filtered = (activeFilter === 'all'
+      ? allEntries
+      : allEntries.filter(e => e.type === activeFilter)
+    ).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    document.getElementById('count').textContent =
+      `${filtered.length} entr${filtered.length === 1 ? 'y' : 'ies'}`;
+
+    if (!filtered.length) {
+      document.getElementById('main-content').innerHTML =
+        `<div class="state"><span>No entries found.</span></div>`;
+      return;
     }
 
-    function formatDate(timestamp) {
-      const date = new Date(timestamp);
-      const now = new Date();
-      const diffMs = now - date;
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 0) {
-        return "heute";
-      } else if (diffDays === 1) {
-        return "gestern";
-      } else if (diffDays < 7) {
-        return `vor ${diffDays} Tagen`;
-      } else if (diffDays < 30) {
-        const weeks = Math.floor(diffDays / 7);
-        return `vor ${weeks} ${weeks === 1 ? 'Woche' : 'Wochen'}`;
-      } else if (diffDays < 365) {
-        const months = Math.floor(diffDays / 30);
-        return `vor ${months} ${months === 1 ? 'Monat' : 'Monaten'}`;
-      } else {
-        const years = Math.floor(diffDays / 365);
-        return `vor ${years} ${years === 1 ? 'Jahr' : 'Jahren'}`;
-      }
-    }
+    // group by topic
+    const groups = {};
+    filtered.forEach(e => {
+      const topic = e.topic || 'Other';
+      if (!groups[topic]) groups[topic] = [];
+      groups[topic].push(e);
+    });
 
-    async function loadData() {
-      try {
-        const res = await fetch("/entries");
-        const data = await res.json();
+    let cardIndex = 0;
+    document.getElementById('main-content').innerHTML = Object.entries(groups).map(([topic, entries]) => {
+      const cards = entries.map(e => cardHTML(e, cardIndex++)).join('');
+      return `
+        <div class="topic-group">
+          <div class="topic-heading">${esc(topic)}</div>
+          <div class="grid">${cards}</div>
+        </div>`;
+    }).join('');
+  }
 
-        console.log(data);
-        render(data);
-      } catch (err) {
-        console.error("Failed to load data:", err);
-        app.textContent = "Error loading data";
-      }
-    }
+  function cardHTML(e, i) {
+    const delay = Math.min(i * 40, 400);
+    const type = e.type || 'other';
+    const data = e.data || {};
 
-    function render(data) {
-      data.topics.forEach((topic, index) => {
-        const section = document.createElement("div");
-        section.className = "topic";
-        
-        // First topic expanded, others collapsed
-        if (index > 0) {
-          section.classList.add("collapsed");
+    return `
+      <div class="card" style="animation-delay:${delay}ms">
+        <div class="card-header">
+          <div class="card-title">${esc(e.title || 'Untitled')}</div>
+          <span class="type-badge type-${type}">${type}</span>
+        </div>
+        ${renderData(data)}
+        <div class="card-footer">
+          <span class="timestamp">${formatDate(e.timestamp)}</span>
+          ${e.source?.url ? `<a class="source-link" href="${esc(e.source.url)}" target="_blank">↗ source</a>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function renderData(data) {
+    const entries = Object.entries(data).filter(([, v]) => v != null && v !== '');
+    if (!entries.length) return '';
+    const rows = entries.map(([key, val]) => `
+      <div class="data-row">
+        <span class="data-key">${esc(key.replace(/_/g, ' '))}</span>
+        <span class="data-val">${renderValue(key, val)}</span>
+      </div>`).join('');
+    return `<div class="data-fields">${rows}</div>`;
+  }
+
+  function renderValue(key, val) {
+    if (Array.isArray(val)) {
+      return `<ul class="data-list">${val.map(item => {
+        if (typeof item === 'object' && item !== null) {
+          // render object items as name + description if available
+          const name = item.name ? `<strong>${esc(item.name)}</strong>` : '';
+          const desc = item.description ? ` — ${esc(item.description)}` : '';
+          return `<li>${name || esc(JSON.stringify(item))}${desc}</li>`;
         }
-
-        const heading = document.createElement("h2");
-        heading.textContent = topic;
-        heading.addEventListener("click", () => {
-          // Close all other topics
-          document.querySelectorAll(".topic").forEach(otherTopic => {
-            if (otherTopic !== section) {
-              otherTopic.classList.add("collapsed");
-            }
-          });
-          // Toggle current topic
-          section.classList.toggle("collapsed");
-        });
-
-        section.appendChild(heading);
-
-        const content = document.createElement("div");
-        content.className = "topic-content";
-
-        data.entries
-          .filter(entry => entry.topic === topic)
-          .sort((a, b) => b.timestamp - a.timestamp) // newest first
-          .forEach(entry => {
-            const card = document.createElement("div");
-            card.className = "card";
-
-            const title = document.createElement("div");
-            title.className = "title";
-            title.textContent = entry.title;
-
-            const meta = document.createElement("div");
-            meta.className = "meta";
-            meta.innerHTML = `${entry.type.toUpperCase()} • ${formatDate(entry.timestamp)}`;
-
-            const content_div = document.createElement("div");
-            content_div.className = "data";
-
-            if (isLink(entry.data)) {
-              const a = document.createElement("a");
-              a.href = entry.data;
-              a.target = "_blank";
-              a.textContent = entry.data;
-              content_div.appendChild(a);
-            } else {
-              const text = document.createElement("div");
-
-              // Convert links inside the text into <a> tags
-              const urlRegex = /(https?:\/\/[^\s]+)/g;
-
-              text.innerHTML = typeof entry.data === "string" ? entry.data.replace(urlRegex, (url) => {
-                return `<a href="${url}" target="_blank">${url}</a>`;
-              }) : entry.data;
-
-              content_div.appendChild(text);
-
-              // Add Google Maps button for "place"
-              if (entry.type === "place") {
-                const mapLink = document.createElement("a");
-
-                const query = encodeURIComponent(entry.data);
-                mapLink.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                mapLink.target = "_blank";
-
-                // 👉 Pill button styling
-                mapLink.style.display = "inline-flex";
-                mapLink.style.alignItems = "center";
-                mapLink.style.gap = "6px";
-                mapLink.style.marginTop = "8px";
-                mapLink.style.padding = "6px 10px";
-                mapLink.style.borderRadius = "999px";
-                mapLink.style.border = "1px solid #334155";
-                mapLink.style.color = "var(--accent)";
-                mapLink.style.fontSize = "12px";
-                mapLink.style.cursor = "pointer";
-                mapLink.style.textDecoration = "none";
-
-                mapLink.textContent = "📍 Open in Maps";
-
-                content_div.appendChild(mapLink);
-              }
-            }
-
-            card.appendChild(title);
-            card.appendChild(meta);
-            card.appendChild(content_div);
-            content.appendChild(card);
-          });
-
-        section.appendChild(content);
-        app.appendChild(section);
-      });
+        return `<li>${esc(String(item))}</li>`;
+      }).join('')}</ul>`;
     }
+    if (typeof val === 'object') {
+      return `<span>${esc(JSON.stringify(val))}</span>`;
+    }
+    const str = String(val);
+    if (key === 'url' || str.startsWith('http')) {
+      return `<a href="${esc(str)}" target="_blank">${esc(str)}</a>`;
+    }
+    return esc(str);
+  }
 
-    loadData();
-  </script>
+  function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(typeof ts === 'number' && ts < 1e12 ? ts * 1000 : ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadEntries();
+</script>
 </body>
-
 </html>

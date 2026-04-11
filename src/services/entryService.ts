@@ -9,11 +9,6 @@ export const entryService = {
 
         dto.timestamp = Date.now();
 
-        if (dto.topic_action === "new_topic") {
-            if (!db.topics.includes(dto.topic)) {
-                db.topics.push(dto.topic);
-            }
-        }
         if (!db.topics.includes(dto.topic)) {
             db.topics.push(dto.topic);
         }
@@ -33,7 +28,7 @@ export const entryService = {
         const fileData = await fs.readFile(DB_FILEPATH, "utf-8");
 
         const jsonData = JSON.parse(fileData);
-        const entites: Array<Entity> = jsonData.entries.map((rawEntity: any) => new Entity(rawEntity));
+        const entites: Array<Entity> = jsonData.entries.map((rawEntity: any) => Entity.fromJSON(rawEntity));
 
         return entites.splice(-limit);
     }
