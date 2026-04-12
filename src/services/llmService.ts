@@ -34,67 +34,128 @@ async function prompt(promptString: string) {
     }
 }
 
-function extractJSON(text: string): string {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("No JSON found");
+function extractJSON(text: string) {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON found");
 
-  return JSON.parse(match[0]);
+    return JSON.parse(match[0]);
 }
 
 function cleanResponse(text: string): string {
-  return text
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
+    return text
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
 }
 
 export const llmService = {
-    async processInformation(description: string, topics: Array<string>, transcription: string): Promise<CreateEntityDto> {
-        const resp = await prompt(`
-OUTPUT ONLY A SINGLE JSON OBJECT. NO PROSE. NO EXPLANATIONS. NO MARKDOWN CODE BLOCKS. NO CONVERSATION. IF YOU OUTPUT ANYTHING OTHER THAN RAW JSON, THE EXTRACTION FAILS.
+    async processInformation(description: string, topics: Array<string>, transcription: string) {
 
----
+        const extractionRaw = await prompt(`
+OUTPUT ONLY RAW JSON. NO PROSE. NO MARKDOWN. NO CODE BLOCKS.
+If you output anything other than a single valid JSON object, the pipeline breaks.
 
-You are an information extraction system. Extract actionable, specific details from Instagram reels for a personal knowledge base.
+Your job is fact extraction. Be exhaustive — omission is always worse than a redundant entry.
 
-EXTRACTION EXAMPLES:
-- Restaurant reel → name, address/neighborhood, signature dish, price range, reservation tip, best time to go
-- Tutorial/how-to → specific skill/technique, exact steps shown, tools/materials needed, expected outcome, difficulty level
-- Travel/place → location name, address/how to get there, what to do there, best time to visit, cost if mentioned
-- Product/tool/app → name, exact problem it solves, price if mentioned, where to get it, key features
-- Recipe → dish name, ingredients list (with measurements if mentioned), key steps, cooking time, tips
-- List/comparison (e.g., "3 affordable brands") → extract ALL items as a list with details for each
-
-OUTPUT FORMAT (valid JSON only):
+Return exactly this shape:
 {
-  "title": "specific, searchable title (e.g., 'Ramen Shop in Shibuya Tokyo' not 'Cool restaurant')",
-  "topic": "content topic like Fashion, Cooking, Travel, Tech (NEVER 'speech-to-text', 'audio', 'video', 'instagram')",
-  "topic_action": "add_to_existing" | "new_topic",
-  "type": "place | tutorial | recipe | tool | travel | information | other",
-  "source": {
-    "platform": "instagram",
-    "author": "username if clearly mentioned, else empty string"
-  },
-  "data": {
-    // REQUIRED: 2-4 specific fields relevant to the type above
-    // For list content (multiple items), use "items": [{name, details, price}, ...]
-    // Omit only if zero actionable info exists
-  }
+  "facts": ["one concrete fact per string"],
+  "type": "place | tool | recipe | tutorial | product | information | other",
+  "topic": "single subject word — Fashion, Tech, Travel, Food, Fitness etc."
 }
 
-RULES:
-1. Be SPECIFIC - "sushi restaurant in Shibuya" not "food place"
-2. Extract STEPS for tutorials, not summaries
-3. Include PRICES, ADDRESSES, or LINKS if mentioned
-4. If reel has no actionable info (just entertainment), set type="other" and data={}
-5. Never invent information - only extract what's in the content
-6. TOPIC must describe the SUBJECT MATTER (Fashion, Cooking, Tech), never the medium
+EXTRACTION RULES:
+- Extract EVERY fact explicitly stated — never skip, never summarize multiple into one
+- Every fact is a plain string sentence. Never an object, never nested
+- Keep every proper noun exactly as stated: names, tool names, brand names, commands, handles
+- One fact per item — always split compound sentences into separate facts
+- These are MANDATORY if present — never skip them:
+  * Every URL or link mentioned (exact string)
+  * Every price or cost mentioned (exact amount + currency)
+  * Every tool, app, software, or platform name
+  * Every command, shortcut, or code snippet
+  * Every step in a process (one fact per step)
+  * Every location name, address, or city
+  * Every person name or brand name
+- Skip only: intro/outro filler ("don't forget to like"), vague hype ("this is amazing")
+- Never invent or infer — only extract what is explicitly stated
+
+TYPE RULES:
+- place: physical location (restaurant, beach, shop, city)
+- tool: app, software, skill, extension, service, platform
+- recipe: food or drink with ingredients or steps
+- tutorial: how-to with steps but no specific named tool
+- product: physical buyable item
+- information: general knowledge, tips, facts
+- other: entertainment only, nothing actionable
 
 Existing topics: ${JSON.stringify(topics)}
-Content description: ${description}
-Audio transcription: ${transcription}`.trim());
-        console.log(resp);
-        const cleanedResp: string = cleanResponse(resp!);
+
+DESCRIPTION:
+${description}
+
+TRANSCRIPTION:
+${transcription}
+`.trim());
+
+        const cleanedExtractionData = cleanResponse(extractionRaw!);
+        const jsonExtraction = extractJSON(cleanedExtractionData);
+        console.log(jsonExtraction);
+
+        const structuringRaw = await prompt(`
+OUTPUT ONLY RAW JSON. NO PROSE. NO MARKDOWN. NO CODE BLOCKS.
+If you output anything other than a single valid JSON object, the pipeline breaks.
+
+Your job is to map the provided facts into the output envelope.
+The facts array is your PRIMARY source. 
+The original description and transcription are your FALLBACK — use them to recover 
+anything the facts array may have missed. Never leave a field empty if the information 
+exists anywhere in the three sources.
+
+Output exactly this shape. Every field is required — use null only if the information 
+truly does not exist anywhere in the sources:
+{
+  "title": "specific searchable title — always includes the primary proper noun",
+  "topic": "single subject word — prefer matching an existing topic, create new only if nothing fits",
+  "type": "place | tool | recipe | tutorial | product | information | other",
+  "primary": "one sentence — what this is and why it matters, never null",
+  "details": ["supporting fact 1", "supporting fact 2"],
+  "action": { "label": "GitHub | Buy | Book | Maps | Install | Watch", "url": "exact url or empty string if platform mentioned but no url" } | null,
+  "location": { "name": "...", "address": "...", "city": "..." } | null,
+  "price": { "amount": 12.99, "currency": "USD", "note": "per person / per month etc." } | null,
+  "steps": ["step 1", "step 2"] | null,
+  "items": [{ "name": "exact name", "detail": "what it does", "price": "if mentioned", "url": "if mentioned" }] | null,
+  "tags": ["tag1", "tag2"]
+}
+
+FIELD RULES:
+- title: always includes the primary proper noun (tool name, place name, product name)
+- topic: prefer existing topics — only create new if nothing fits
+- type: must match the actual content — place for locations, tool for apps/software, etc.
+- primary: always required, one punchy sentence, never null
+- details: minimum 1 item — use for context not covered by other fields
+- action: include if ANY url or platform was mentioned — set url to "" if no exact url
+- steps: only for tutorials and recipes, null for everything else
+- items: use when 2+ distinct named tools, products, or places are described
+- tags: 2-4 lowercase keywords, no words already in the title
+
+PROPER NOUN RULE:
+Every specific name from the facts (person, tool, brand, command, place) MUST appear 
+somewhere in the output. Never replace a specific name with a generic description.
+
+Existing topics: ${JSON.stringify(topics)}
+
+FACTS (primary source):
+${JSON.stringify(jsonExtraction.facts)}
+
+ORIGINAL DESCRIPTION (fallback):
+${description}
+
+ORIGINAL TRANSCRIPTION (fallback):
+${transcription}
+`.trim());
+
+        const cleanedResp: string = cleanResponse(structuringRaw!);
         const jsonResp = extractJSON(cleanedResp);
         return CreateEntityDto.fromJSON(jsonResp);
     },
