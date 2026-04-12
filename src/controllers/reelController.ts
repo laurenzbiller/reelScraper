@@ -11,12 +11,13 @@ export const reelController = {
             const { url } = req.body;
 
             const topics = await topicService.getAll();
-            // const description = await reelService.getDescription(url);
+            const description = await reelService.getDescription(url);
             const transcription = await reelService.getTranscription(url);
 
-            const dto: CreateEntityDto = await llmService.processInformation("", topics, transcription);
-            // dto.source.rawDescription = description;
-            // dto.source.rawTranscription = transcription;
+            const dto: CreateEntityDto = await llmService.processInformation(description, topics, transcription);
+            dto.source.rawDescription = description;
+            dto.source.rawTranscription = transcription;
+            dto.source.url = url;
  
             await entryService.add(dto);
             return res.status(200).json({ status: "ok" });

@@ -1,6 +1,11 @@
 import ffmpeg from "fluent-ffmpeg";
 import { spawn } from "child_process";
 import { llmService } from "./LLMService.ts";
+import { deleteFile } from "../utils.ts";
+
+import path from "path";
+const OUTPUT_VIDEO_PATH = path.resolve(".tmp/video.mp4");
+const OUTPUT_AUDIO_PATH = path.resolve(".tmp/audio.mp3");
 
 export const reelService = {
     async getDescription(url: string): Promise<string> {
@@ -21,12 +26,15 @@ export const reelService = {
     async getTranscription(url: string): Promise<string> {
         const videoPath = await donwloadVideo(url);
         await extractAudio(videoPath);
-        return llmService.transcribeWhisper(OUTPUT_AUDIO_PATH);
+        const transcript = await llmService.transcribeWhisper(OUTPUT_AUDIO_PATH);
+
+        // Async Delete
+        deleteFile(OUTPUT_AUDIO_PATH);
+        deleteFile(OUTPUT_VIDEO_PATH);
+
+        return transcript;
     }
 }
-
-const OUTPUT_VIDEO_PATH = "/Users/lbiller/Desktop/Neuer Ordner/reel.mp4";
-const OUTPUT_AUDIO_PATH = "/Users/lbiller/Desktop/Neuer Ordner/audio.mp3";
 
 async function extractAudio(videoPath: string) {
     return new Promise((resolve, reject) => {
@@ -57,7 +65,7 @@ async function donwloadVideo(url: string): Promise<string> {
 
         ytdlp.on("close", (code) => {
             if (code === 0) {
-                resolve("/Users/lbiller/Desktop/Neuer Ordner/reel.mp4");
+                resolve(OUTPUT_VIDEO_PATH);
             } else {
                 reject(new Error(`yt-dlp exited with code ${code}`));
             }
