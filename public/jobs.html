@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0e;
+    --surface: #141416;
+    --border: #222226;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+    --pad: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px var(--pad);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .logo-dot.connected { background: #7ddb7d; }
+  .logo-dot.disconnected { background: var(--accent2); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  #count {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #job-list {
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .job-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeUp 0.25s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .job-url {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12px;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+
+  .job-url:hover { text-decoration: underline; }
+
+  .job-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .job-state {
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+  }
+
+  .state-pending { background: #2a2a1a; color: var(--accent); border-color: #3a3a1a; }
+  .state-processing { background: #1a2a2a; color: #7ddbdb; border-color: #2a4a4a; }
+  .state-completed { background: #1a2a1a; color: #7ddb7d; border-color: #2a4a2a; }
+  .state-failed { background: #2a1a1a; color: #ff9d7d; border-color: #4a2a1a; }
+  .state-store_in_db { background: #1a1a2a; color: #7d9dff; border-color: #2a2a4a; }
+  .state-default { background: #1e1e1e; color: #999; border-color: #333; }
+
+  .job-id {
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-bar {
+    padding: 8px var(--pad);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+  }
+
+  .status-dot.connected { background: #7ddb7d; }
+
+  @media (min-width: 640px) {
+    :root { --pad: 28px; }
+    header { padding: 18px var(--pad); }
+    .logo { font-size: 18px; }
+    #job-list { padding: var(--pad); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot" id="status-dot"></div>
+    Job Monitor
+  </div>
+  <span id="count">0 jobs</span>
+</header>
+
+<div class="status-bar">
+  <div class="status-dot" id="conn-dot"></div>
+  <span id="conn-status">Connecting...</span>
+</div>
+
+<div id="job-list">
+  <div class="empty-state">
+    <div class="spinner"></div>
+    <span>Waiting for updates...</span>
+  </div>
+</div>
+
+<script>
+  const jobList = document.getElementById('job-list');
+  const countEl = document.getElementById('count');
+  const connStatus = document.getElementById('conn-status');
+  const connDot = document.getElementById('conn-dot');
+  const statusDot = document.getElementById('status-dot');
+
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${window.location.host}`;
+
+  function connect() {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      connStatus.textContent = 'Connected';
+      connDot.classList.add('connected');
+      statusDot.classList.add('connected');
+      statusDot.classList.remove('disconnected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const jobs = JSON.parse(event.data);
+        renderJobs(jobs);
+      } catch (err) {
+        console.error('Failed to parse message:', err);
+      }
+    };
+
+    ws.onclose = () => {
+      connStatus.textContent = 'Disconnected - Reconnecting...';
+      connDot.classList.remove('connected');
+      statusDot.classList.remove('connected');
+      statusDot.classList.add('disconnected');
+      setTimeout(connect, 3000);
+    };
+
+    ws.onerror = () => {
+      connStatus.textContent = 'Error - Retrying...';
+      statusDot.classList.add('disconnected');
+    };
+  }
+
+  function renderJobs(jobs) {
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      jobList.innerHTML = `
+        <div class="empty-state">
+          <span>No active jobs</span>
+        </div>
+      `;
+      countEl.textContent = '0 jobs';
+      return;
+    }
+
+    countEl.textContent = `${jobs.length} job${jobs.length === 1 ? '' : 's'}`;
+
+    jobList.innerHTML = jobs.map(job => {
+      const stateClass = `state-${job.state?.toLowerCase() || 'default'}`;
+      return `
+        <div class="job-card">
+          <a class="job-url" href="${esc(job.url)}" target="_blank">${esc(job.url)}</a>
+          <div class="job-meta">
+            <span class="job-state ${stateClass}">${esc(job.state || 'UNKNOWN')}</span>
+            <span class="job-id">${esc(job.id)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  connect();
+</script>
+
+</body>
+</html>
