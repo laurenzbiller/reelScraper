@@ -1,44 +1,43 @@
-import { randomUUID } from "crypto";
-import { DB_FILEPATH } from "../config.ts";
-import { CreateEntityDto, Entity } from "../types/index.ts";
-import fs from "fs/promises";
+import { db } from "../db/index.ts";
+import { entries, type Entry, type NewEntry } from "../db/schema.ts";
+import { eq, and, sql } from "drizzle-orm";
+
+export type CreateEntryDto = Omit<NewEntry, 'id' | 'timestamp'> & { id?: string; timestamp?: number };
 
 export const entryService = {
-    async add(dto: CreateEntityDto) {
-        const rawJson = await fs.readFile(DB_FILEPATH, "utf-8");
-        const db = JSON.parse(rawJson);
+    async add(dto: CreateEntryDto) {
+        const exists = await db.select({ id: entries.id })
+            .from(entries)
+            .where(and(
+                sql`lower(${entries.title}) = lower(${dto.title})`,
+                eq(entries.type, dto.type)
+            ))
+            .limit(1);
 
-        dto.id = randomUUID();
-        dto.timestamp = Date.now();
+        if (exists.length > 0) return;
 
-        const exists = db.entries.some(
-            (e: any) =>
-                e.title.toLowerCase() === dto.title.toLowerCase() &&
-                e.type === dto.type
-        );
-        if (exists) return;
-
-        db.entries.push(dto);
-        await fs.writeFile(DB_FILEPATH, JSON.stringify(db, null, 2));
+        await db.insert(entries).values({
+            ...dto,
+            timestamp: Date.now()
+        });
     },
 
-    async getAll(limit: number = 0): Promise<Array<Entity>> {
-        const fileData = await fs.readFile(DB_FILEPATH, "utf-8");
+    async getAll(limit: number = 0): Promise<Array<Entry>> {
+        const query = db.select().from(entries).orderBy(entries.timestamp);
 
-        const jsonData = JSON.parse(fileData);
-        const entites: Array<Entity> = jsonData.entries.map((rawEntity: any) => Entity.fromJSON(rawEntity));
+        if (limit > 0) {
+            return await query.limit(limit);
+        }
 
-        return entites.splice(-limit);
+        return await query;
     },
 
-    async update(updatedEntry: CreateEntityDto) {
-        const rawJson = await fs.readFile(DB_FILEPATH, "utf-8");
-        const db = JSON.parse(rawJson);
+    async update(updatedEntry: CreateEntryDto & { id: string }) {
+        const result = await db.update(entries)
+            .set(updatedEntry)
+            .where(eq(entries.id, updatedEntry.id))
+            .returning();
 
-        const index = db.entries.findIndex((e: any) => (e.id as string).toLocaleLowerCase() === updatedEntry.id?.toLocaleLowerCase());
-        if (index === -1) throw new Error("Kein alter Entry gefunden!");
-
-        db.entries[index] = updatedEntry;
-        await fs.writeFile(DB_FILEPATH, JSON.stringify(db, null, 2));
+        if (result.length === 0) throw new Error("Entry not found!");
     }
 }

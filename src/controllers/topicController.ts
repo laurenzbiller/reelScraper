@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { topicService } from "../services/TopicService.ts";
+import { topicService } from "../services/topicService.ts";
 
 export const topicController = {
     async add(req: Request, res: Response, nest: NextFunction) {
@@ -11,7 +11,7 @@ export const topicController = {
 
     async getAll(req: Request, res: Response, nest: NextFunction) {
         const topics = await topicService.getAll();
-        return res.status(200).json(JSON.stringify(topics));
+        return res.status(200).json(topics);
     },
 
     async remove(req: Request, res: Response, nest: NextFunction) {

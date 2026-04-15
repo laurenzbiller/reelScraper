@@ -1,6 +1,6 @@
 import ffmpeg from "fluent-ffmpeg";
 import { spawn } from "child_process";
-import { llmService } from "./LLMService.ts";
+import { llmService } from "./llmService.ts";
 import { deleteFile } from "../utils.ts";
 
 import path from "path";

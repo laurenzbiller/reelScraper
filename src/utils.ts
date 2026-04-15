@@ -4,7 +4,7 @@ export async function deleteFile(path: string) {
   try {
     await unlink(path);
     console.log(`Successfully deleted ${path}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting file:', error.message);
   }
 }

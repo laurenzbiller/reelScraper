@@ -2,7 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import 'dotenv/config';
 import OpenAI from "openai";
 import fs from "fs";
-import { CreateEntityDto } from "../types/index.ts";
+import type { NewEntry, ItemData, ActionData, LocationData, PriceData } from "../db/schema.ts";
+import type { CreateEntryDto } from "./entryService.ts";
 
 // The client gets the API key from the environment variable `GEMINI_API_KEY`.
 const googleai = new GoogleGenAI({});
@@ -52,7 +53,7 @@ function cleanResponse(text: string): string {
 }
 
 export const llmService = {
-    async processInformation(description: string, topics: Array<string>, transcription: string) {
+    async processInformation(description: string, topics: Array<string>, transcription: string): Promise<CreateEntryDto> {
 
         const extractionRaw = await prompt(`
 OUTPUT ONLY RAW JSON. NO PROSE. NO MARKDOWN. NO CODE BLOCKS.
@@ -161,7 +162,20 @@ ${transcription}
 
         const cleanedResp: string = cleanResponse(structuringRaw!);
         const jsonResp = extractJSON(cleanedResp);
-        return CreateEntityDto.fromJSON(jsonResp);
+        
+        return {
+            title: jsonResp.title ?? '',
+            primary: jsonResp.primary ?? '',
+            type: jsonResp.type ?? '',
+            topic: jsonResp.topic || null,
+            tags: jsonResp.tags ?? [],
+            steps: jsonResp.steps ?? null,
+            items: jsonResp.items ?? null,
+            action: jsonResp.action ?? null,
+            location: jsonResp.location ?? null,
+            price: jsonResp.price ?? null,
+            source: null,
+        };
     },
 
     async transcribeWhisper(file: string): Promise<string> {

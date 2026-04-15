@@ -1,6 +1,2 @@
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-export const DB_FILEPATH = path.join(__dirname, "../db.json");
+// Config file - DB connection now handled in src/db/index.ts via DATABASE_URL env var
+export const DB_FILEPATH = null; // Deprecated: now using PostgreSQL via Drizzle

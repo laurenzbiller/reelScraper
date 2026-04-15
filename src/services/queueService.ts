@@ -1,9 +1,9 @@
-import { SourceData, type CreateEntityDto } from "../types/index.ts";
 import { QueueJob } from "../types/queueTypes.ts"
-import { entryService } from "./entryService.ts";
-import { llmService } from "./LLMService.ts";
+import { entryService, type CreateEntryDto } from "./entryService.ts";
+import { llmService } from "./llmService.ts";
 import { reelService } from "./reelService.ts";
-import { topicService } from "./TopicService.ts";
+import { topicService } from "./topicService.ts";
+import type { SourceData } from "../db/schema.ts";
 
 export const jobQueue: Array<QueueJob> = [];
 let isProcessing: boolean = false;
@@ -22,8 +22,8 @@ async function processQueue() {
         const transcription = await reelService.getTranscription(job.url);
 
         job.nextStep();
-        const dto = await llmService.processInformation(description, topics, transcription);
-        dto.source = new SourceData(job.url, description, transcription);
+        const dto: CreateEntryDto = await llmService.processInformation(description, topics, transcription);
+        dto.source = { url: job.url, rawDescription: description, rawTranscription: transcription };
 
         job.nextStep();
         await entryService.add(dto);
