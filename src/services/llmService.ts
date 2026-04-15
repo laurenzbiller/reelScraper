@@ -36,7 +36,10 @@ async function prompt(promptString: string) {
 
 function extractJSON(text: string) {
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("No JSON found");
+    if (!match) {
+        console.log(text);
+        throw new Error("No JSON found");
+    }
 
     return JSON.parse(match[0]);
 }
@@ -105,6 +108,7 @@ ${transcription}
         const structuringRaw = await prompt(`
 OUTPUT ONLY RAW JSON. NO PROSE. NO MARKDOWN. NO CODE BLOCKS.
 If you output anything other than a single valid JSON object, the pipeline breaks.
+I must be a valid json object with valid opening and closing brackets.
 
 Your job is to map the provided facts into the output envelope.
 The facts array is your PRIMARY source. 
@@ -116,7 +120,7 @@ Output exactly this shape. Every field is required — use null only if the info
 truly does not exist anywhere in the sources:
 {
   "title": "specific searchable title — always includes the primary proper noun",
-  "topic": "single subject word — prefer matching an existing topic, create new only if nothing fits",
+  "topic": "single subject word — if matching existing topic use this, if not leave empty",
   "type": "place | tool | recipe | tutorial | product | information | other",
   "primary": "one sentence — what this is and why it matters, never null",
   "details": ["supporting fact 1", "supporting fact 2"],
@@ -130,7 +134,7 @@ truly does not exist anywhere in the sources:
 
 FIELD RULES:
 - title: always includes the primary proper noun (tool name, place name, product name)
-- topic: prefer existing topics — only create new if nothing fits
+- topic: match existing topic, or leave empty
 - type: must match the actual content — place for locations, tool for apps/software, etc.
 - primary: always required, one punchy sentence, never null
 - details: minimum 1 item — use for context not covered by other fields

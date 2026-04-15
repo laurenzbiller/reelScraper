@@ -11,5 +11,10 @@ export const entryController = {
         } catch (err) {
             next(err);
         }
+    },
+
+    async update(req: Request, res: Response, next: NextFunction) {
+        await entryService.update(req.body);
+        return res.json({status: "ok"});
     }
 }

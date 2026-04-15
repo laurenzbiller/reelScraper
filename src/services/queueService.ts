@@ -13,25 +13,29 @@ async function processQueue() {
     isProcessing = true;
     const job = jobQueue[0]!;
 
-    job.nextStep();
-    const topics = await topicService.getAll();
-    const description = await reelService.getDescription(job.url);
-    
-    job.nextStep();
-    const transcription = await reelService.getTranscription(job.url);
+    try {
+        job.nextStep();
+        const topics = await topicService.getAll();
+        const description = await reelService.getDescription(job.url);
 
-    job.nextStep();
-    const dto = await llmService.processInformation(description, topics, transcription);
-    dto.source = new SourceData(job.url, description, transcription);
+        job.nextStep();
+        const transcription = await reelService.getTranscription(job.url);
 
-    job.nextStep();
-    await entryService.add(dto);
-    
-    job.nextStep();
-    jobQueue.shift();
+        job.nextStep();
+        const dto = await llmService.processInformation(description, topics, transcription);
+        dto.source = new SourceData(job.url, description, transcription);
 
-    isProcessing = false;
-    processQueue();
+        job.nextStep();
+        await entryService.add(dto);
+
+        job.nextStep();
+    } catch (err) {
+        job.error(err)
+    } finally {
+        jobQueue.shift();
+        isProcessing = false;
+        processQueue();
+    }
 }
 
 export const queueService = {

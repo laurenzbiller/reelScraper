@@ -1,5 +1,6 @@
+import { randomUUID } from "crypto";
 import { DB_FILEPATH } from "../config.ts";
-import { Entity, type CreateEntityDto } from "../types/index.ts";
+import { CreateEntityDto, Entity } from "../types/index.ts";
 import fs from "fs/promises";
 
 export const entryService = {
@@ -7,11 +8,8 @@ export const entryService = {
         const rawJson = await fs.readFile(DB_FILEPATH, "utf-8");
         const db = JSON.parse(rawJson);
 
+        dto.id = randomUUID();
         dto.timestamp = Date.now();
-
-        if (!db.topics.includes(dto.topic)) {
-            db.topics.push(dto.topic);
-        }
 
         const exists = db.entries.some(
             (e: any) =>
@@ -31,5 +29,16 @@ export const entryService = {
         const entites: Array<Entity> = jsonData.entries.map((rawEntity: any) => Entity.fromJSON(rawEntity));
 
         return entites.splice(-limit);
+    },
+
+    async update(updatedEntry: CreateEntityDto) {
+        const rawJson = await fs.readFile(DB_FILEPATH, "utf-8");
+        const db = JSON.parse(rawJson);
+
+        const index = db.entries.findIndex((e: any) => (e.id as string).toLocaleLowerCase() === updatedEntry.id?.toLocaleLowerCase());
+        if (index === -1) throw new Error("Kein alter Entry gefunden!");
+
+        db.entries[index] = updatedEntry;
+        await fs.writeFile(DB_FILEPATH, JSON.stringify(db, null, 2));
     }
 }

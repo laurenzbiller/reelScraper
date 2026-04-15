@@ -10,6 +10,7 @@ export function initWSS(server: Server) {
 
     wss.on('connection', (ws) => {
         clients.add(ws);
+        ws.send(JSON.stringify(jobQueue));
     });
     wss.on('close', (ws: WebSocket) => {
         clients.delete(ws);

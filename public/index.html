@@ -445,7 +445,6 @@
   function cardHTML(e, i) {
     const delay = Math.min(i * 40, 400);
     const type = e.type || 'other';
-    const data = e.data || {};
 
     return `
       <div class="card" style="animation-delay:${delay}ms">
@@ -453,7 +452,7 @@
           <div class="card-title">${esc(e.title || 'Untitled')}</div>
           <span class="type-badge type-${type}">${type}</span>
         </div>
-        ${renderData(data)}
+        ${renderEntityContent(e)}
         <div class="card-footer">
           <span class="timestamp">${formatDate(e.timestamp)}</span>
           ${e.source?.url ? `<a class="source-link" href="${esc(e.source.url)}" target="_blank">↗ source</a>` : ''}
@@ -461,37 +460,65 @@
       </div>`;
   }
 
-  function renderData(data) {
-    const entries = Object.entries(data).filter(([, v]) => v != null && v !== '');
-    if (!entries.length) return '';
-    const rows = entries.map(([key, val]) => `
-      <div class="data-row">
-        <span class="data-key">${esc(key.replace(/_/g, ' '))}</span>
-        <span class="data-val">${renderValue(key, val)}</span>
-      </div>`).join('');
-    return `<div class="data-fields">${rows}</div>`;
-  }
+  function renderEntityContent(e) {
+    const rows = [];
 
-  function renderValue(key, val) {
-    if (Array.isArray(val)) {
-      return `<ul class="data-list">${val.map(item => {
-        if (typeof item === 'object' && item !== null) {
-          // render object items as name + description if available
+    if (e.primary) {
+      rows.push(`<div class="data-row"><span class="data-val" style="color:var(--text)">${esc(e.primary)}</span></div>`);
+    }
+
+    if (e.action?.url) {
+      rows.push(`<div class="data-row">
+        <span class="data-key">Action</span>
+        <span class="data-val"><a href="${esc(e.action.url)}" target="_blank">${esc(e.action.label || 'Link')}</a></span>
+      </div>`);
+    }
+
+    if (e.location?.name) {
+      const loc = [e.location.name, e.location.address, e.location.city].filter(Boolean).join(', ');
+      rows.push(`<div class="data-row">
+        <span class="data-key">Location</span>
+        <span class="data-val">${esc(loc)}</span>
+      </div>`);
+    }
+
+    if (e.price?.amount != null) {
+      const price = [e.price.currency, e.price.amount].filter(Boolean).join(' ') + (e.price.note ? ` (${esc(e.price.note)})` : '');
+      rows.push(`<div class="data-row">
+        <span class="data-key">Price</span>
+        <span class="data-val">${price}</span>
+      </div>`);
+    }
+
+    if (e.steps?.length) {
+      rows.push(`<div class="data-row">
+        <span class="data-key">Steps</span>
+        <ul class="data-list">${e.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+      </div>`);
+    }
+
+    if (e.items?.length) {
+      rows.push(`<div class="data-row">
+        <span class="data-key">Items</span>
+        <ul class="data-list">${e.items.map(item => {
           const name = item.name ? `<strong>${esc(item.name)}</strong>` : '';
-          const desc = item.description ? ` — ${esc(item.description)}` : '';
-          return `<li>${name || esc(JSON.stringify(item))}${desc}</li>`;
-        }
-        return `<li>${esc(String(item))}</li>`;
-      }).join('')}</ul>`;
+          const detail = item.detail ? ` — ${esc(item.detail)}` : '';
+          const price = item.price ? ` <em>(${esc(item.price)})</em>` : '';
+          const link = item.url ? ` <a href="${esc(item.url)}" target="_blank">↗</a>` : '';
+          return `<li>${name}${detail}${price}${link}</li>`;
+        }).join('')}</ul>
+      </div>`);
     }
-    if (typeof val === 'object') {
-      return `<span>${esc(JSON.stringify(val))}</span>`;
+
+    if (e.tags?.length) {
+      rows.push(`<div class="data-row">
+        <span class="data-key">Tags</span>
+        <span class="data-val">${e.tags.map(t => `#${esc(t)}`).join(' ')}</span>
+      </div>`);
     }
-    const str = String(val);
-    if (key === 'url' || str.startsWith('http')) {
-      return `<a href="${esc(str)}" target="_blank">${esc(str)}</a>`;
-    }
-    return esc(str);
+
+    if (!rows.length) return '';
+    return `<div class="data-fields">${rows.join('')}</div>`;
   }
 
   function formatDate(ts) {

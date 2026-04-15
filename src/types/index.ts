@@ -1,4 +1,5 @@
 export class Entity {
+    id: string | null;
     title: string;
     primary: string;
     action: ActionData | null;
@@ -8,11 +9,12 @@ export class Entity {
     items: Array<ItemData> | null;
     tags: Array<string>;
     timestamp: number;
-    topic: string;
+    topic: string | null;
     type: string;
     source: SourceData | null;
 
-    constructor(title: string, primary: string, action: ActionData | null = null, location: LocationData | null = null, price: PriceData | null = null, steps: Array<string> | null = null, items: Array<ItemData> | null = null, tags: Array<string> = [], timestamp: number = 0, topic: string = '', type: string = '', source: SourceData | null = null) {
+    constructor(id: string | null = null, title: string, primary: string, action: ActionData | null = null, location: LocationData | null = null, price: PriceData | null = null, steps: Array<string> | null = null, items: Array<ItemData> | null = null, tags: Array<string> = [], timestamp: number = 0, topic: string = '', type: string = '', source: SourceData | null = null) {
+        this.id = id;
         this.title = title;
         this.primary = primary;
         this.action = action;
@@ -29,6 +31,7 @@ export class Entity {
 
     static fromJSON(json: any): Entity {
         return new Entity(
+            json.id ?? null,
             json.title ?? '',
             json.primary ?? '',
             json.action ? ActionData.fromJSON(json.action) : null,
@@ -146,6 +149,7 @@ export class SourceData {
 }
 
 export class CreateEntityDto {
+    id: string | null;
     title: string;
     primary: string;
     details: Array<string>;
@@ -156,11 +160,12 @@ export class CreateEntityDto {
     items: Array<ItemData> | null;
     tags: Array<string>;
     timestamp: number;
-    topic: string;
+    topic: string | null;
     type: string;
     source: SourceData | null;
 
     constructor(
+        id: string | null = null,
         title: string,
         primary: string,
         details: Array<string>,
@@ -175,6 +180,7 @@ export class CreateEntityDto {
         type: string = '',
         source: SourceData | null = null
     ) {
+        this.id = id;
         this.title = title;
         this.primary = primary;
         this.details = details;
@@ -192,6 +198,7 @@ export class CreateEntityDto {
 
     static fromJSON(json: any): CreateEntityDto {
         return new CreateEntityDto(
+            json.id ?? null,
             json.title ?? '',
             json.primary ?? '',
             json.details ?? [],
