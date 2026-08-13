@@ -1,137 +1,126 @@
 # ReelScraper 📚
 
-A smart personal organizer for Instagram Reels that helps you save and categorize interesting content you discover. Never lose track of great ideas, places, or resources from your Instagram feed again.
+Ein persönlicher Content-Organizer für Instagram Reels. ReelScraper extrahiert, klassifiziert und speichert interessante Inhalte aus Instagram und macht aus dem eigenen Feed eine durchsuchbare, kategorisierte persönliche Wissensdatenbank.
 
-## 🎯 Purpose
+---
 
-Tired of seeing something interesting on Instagram Reels and then forgetting about it? ReelScraper automatically:
-- Extracts content from Instagram Reel URLs
-- Uses AI to categorize and organize content into topics
-- Creates a searchable personal knowledge base
-- Helps you build a collection of ideas, places, and resources worth remembering
+## Inhaltsverzeichnis
 
-## ✨ Features
+- [Überblick](#überblick)
+- [Features](#features)
+- [Architektur](#architektur)
+- [Erste Schritte](#erste-schritte)
+- [Verwendung](#verwendung)
+- [API-Referenz](#api-referenz)
+- [Datenmodell](#datenmodell)
+- [Projektstruktur](#projektstruktur)
+- [Entwicklung](#entwicklung)
+- [Troubleshooting](#troubleshooting)
+- [Datenschutz & Sicherheit](#datenschutz--sicherheit)
+- [Lizenz](#lizenz)
 
-- **Smart Content Extraction**: Automatically pulls reel descriptions using Instagram's API
-- **AI-Powered Categorization**: Uses Google Gemini AI to classify content into:
-  - Places (restaurants, destinations, locations)
-  - Websites (tools, resources, articles)
-  - Movies & TV Shows
-  - Information & Ideas
-  - Tools & Apps
-  - Other content types
-- **Topic Organization**: Groups related content automatically or creates new topics
-- **Web Dashboard**: Beautiful, responsive interface to browse your collection
-- **Persistent Storage**: All data stored locally in JSON format
-- **Timestamp Tracking**: See when you saved each item
-- **Quick Actions**: Direct links to maps for places, external links for websites
+---
 
-## 🚀 Quick Start
+## Überblick
 
-### Prerequisites
-- Node.js (v18 or higher)
-- Google Gemini API key
+Interessante Orte, Tools und Ideen aus Instagram Reels sind schnell gesehen – und genauso schnell wieder vergessen. ReelScraper löst dieses Problem, indem der Inhalt eines Reels automatisch extrahiert, per KI klassifiziert und thematisch einsortiert wird, damit nichts Merkenswertes verloren geht.
+
+## Projektstatus
+
+Dieses Repository enthält den funktionalen Prototyp von ReelScraper: eine vollständige End-to-End-Umsetzung des Kernkonzepts – Extraktion, KI-basierte Klassifizierung, Speicherung und Abruf – über Backend und Web-Dashboard. Er dient als Machbarkeitsnachweis und Grundlage für die Weiterentwicklung.
+
+Parallel dazu entsteht ein natives **SwiftUI-Frontend** für iOS, das dieselbe API konsumiert und einen mobilen, nativen Zugang zur eigenen Sammlung ermöglicht. Backend und API sind bewusst plattformunabhängig gehalten, um genau diese Mehrfachnutzung durch verschiedene Clients zu unterstützen.
+
+## Features
+
+- **Automatisierte Content-Extraktion** – Zieht Reel-Beschreibungen über die öffentliche oEmbed-API von Instagram
+- **KI-gestützte Kategorisierung** – Nutzt Google Gemini, um Inhalte in Typen wie Orte, Websites, Filme/Serien, Tools und allgemeine Informationen einzuordnen
+- **Automatische Themenorganisation** – Ordnet neue Einträge bestehenden Themen zu oder erstellt bei Bedarf neue
+- **Web-Dashboard** – Übersichtliches, responsives Interface zum Durchstöbern der gesammelten Inhalte
+- **Persistente lokale Speicherung** – Alle Daten werden lokal in einer strukturierten JSON-Datenbank gespeichert
+- **Zeitstempel** – Jeder gespeicherte Eintrag zeigt, wann er hinzugefügt wurde
+- **Schnellzugriffe** – Direkte Links zu Karten bei Orten und zu externen Ressourcen bei Websites/Tools
+
+## Architektur
+
+| Ebene | Technologie |
+|---|---|
+| Backend | Express.js (ES Modules) |
+| KI-Verarbeitung | Google Gemini 2.5 Flash |
+| Speicherung | Lokale JSON-Datenbank |
+| Frontend | Vanilla JavaScript + modernes CSS |
+| API | RESTful HTTP-Endpunkte |
+
+Der Server stellt eine schlanke REST-API zum Einreichen und Abrufen von Reels bereit. Beim Einreichen wird die Reel-Beschreibung abgerufen, an Gemini zur Klassifizierung übergeben und anschließend zusammen mit dem zugewiesenen Thema und extrahierten Metadaten (Adresse, URL etc.) gespeichert. Das Dashboard greift auf denselben Datenbestand zu und stellt eine kategorisierte, aufklappbare Ansicht aller gespeicherten Inhalte dar.
+
+## Erste Schritte
+
+### Voraussetzungen
+
+- Node.js ab Version 18
+- Ein Google-Gemini-API-Key
 
 ### Installation
 
-1. **Clone and install dependencies:**
 ```bash
-git clone <repository-url>
+git clone https://github.com/laurenzbiller/reelScraper.git
 cd reelScraper
 npm install
 ```
 
-2. **Set up environment variables:**
+### Konfiguration
+
+Erstelle eine `.env`-Datei im Projektroot:
+
 ```bash
-# Create .env file
-echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+GEMINI_API_KEY=dein_gemini_api_key
 ```
 
-3. **Start the server:**
+### Start
+
 ```bash
 npm start
 ```
 
-4. **Open your browser:**
-Navigate to `http://localhost:3000`
+Das Dashboard ist danach unter [http://localhost:3000](http://localhost:3000) erreichbar.
 
-## 📖 Usage
+## Verwendung
 
-### Adding Content
+### Reel hinzufügen
 
-1. **Find an interesting Instagram Reel**
-2. **Copy the reel URL**
-3. **Send a POST request to add it:**
+Kopiere die URL eines Instagram Reels und sende sie an die API:
+
 ```bash
 curl -X POST http://localhost:3000/reel \
   -H "Content-Type: application/json" \
   -d '{"url": "https://www.instagram.com/reel/..."}'
 ```
 
-The app will automatically:
-- Extract the reel description
-- Analyze the content with AI
-- Categorize it into appropriate topics
-- Store it in your collection
+ReelScraper extrahiert daraufhin die Beschreibung, klassifiziert den Inhalt, weist ihn einem Thema zu und speichert ihn automatisch.
 
-### Browsing Your Collection
+### Sammlung durchstöbern
 
-- Visit `http://localhost:3000` to see your dashboard
-- Content is organized by topics (collapsible sections)
-- Each entry shows:
-  - Title and content type
-  - When it was saved
-  - Relevant data (links, addresses, etc.)
-  - Quick action buttons (maps, external links)
+Öffne [http://localhost:3000](http://localhost:3000), um das Dashboard zu sehen. Inhalte sind nach Themen in aufklappbaren Abschnitten gruppiert; jeder Eintrag zeigt Titel, Content-Typ, Speicherdatum und passende Schnellzugriffe.
 
-### Viewing All Entries
+## API-Referenz
 
-Access your complete collection via:
-```bash
-curl http://localhost:3000/entries
-```
+| Methode | Endpunkt | Beschreibung |
+|---|---|---|
+| `POST` | `/reel` | Neues Instagram Reel per URL hinzufügen und klassifizieren |
+| `GET` | `/entries` | Alle gespeicherten, organisierten Einträge abrufen |
+| `GET` | `/` | Web-Dashboard ausliefern |
 
-## 🏗️ Architecture
+## Datenmodell
 
-- **Backend**: Express.js server with ES modules
-- **AI Processing**: Google Gemini 2.5 Flash for content classification
-- **Storage**: Local JSON database (`db.json`)
-- **Frontend**: Vanilla JavaScript with modern CSS
-- **API**: RESTful endpoints for content management
+Einträge werden in `db.json` persistiert:
 
-## 📁 Project Structure
-
-```
-reelScraper/
-├── index.js              # Main Express server
-├── descriptionHandle.js  # AI processing and database logic
-├── package.json          # Dependencies and scripts
-├── .env                  # Environment variables (API keys)
-├── db.json              # Local database (topics and entries)
-├── public/
-│   └── index.html       # Web dashboard
-└── README.md            # This file
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env` file with:
-```
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-### Database Structure
-
-The `db.json` file stores:
 ```json
 {
   "topics": ["Travel", "Food", "Tech", "Movies"],
   "entries": [
     {
       "title": "Amazing restaurant in Tokyo",
-      "topic": "Food", 
+      "topic": "Food",
       "type": "place",
       "data": "Sushi Restaurant, Shibuya, Tokyo",
       "url": "https://instagram.com/reel/...",
@@ -141,75 +130,62 @@ The `db.json` file stores:
 }
 ```
 
-## 🤖 AI Classification
+**Unterstützte Content-Typen:**
 
-The system uses Google Gemini AI to:
-- Analyze reel descriptions
-- Determine content type (place, website, movie, etc.)
-- Match to existing topics or create new ones
-- Extract relevant data (addresses, URLs, etc.)
+| Typ | Beschreibung |
+|---|---|
+| `place` | Restaurants, Reiseziele, Orte |
+| `website` | Tools, Ressourcen, Artikel |
+| `movie` | Filmempfehlungen |
+| `tvshow` | Serienempfehlungen |
+| `information` | Allgemeines Wissen und Ideen |
+| `tool` | Apps und Software |
+| `other` | Sonstige Inhalte |
 
-**Content Types Supported:**
-- `place` - Restaurants, destinations, locations
-- `website` - Tools, resources, articles
-- `movie` - Film recommendations
-- `tvshow` - TV series suggestions  
-- `information` - General knowledge and ideas
-- `tool` - Apps and software
-- `other` - Miscellaneous content
+## Projektstruktur
 
-## 🛠️ Development
-
-### Available Scripts
-```bash
-npm start      # Start the development server
-npm test       # Run tests (placeholder)
+```
+reelScraper/
+├── index.js               # Express-Server & Routen-Definitionen
+├── descriptionHandle.js   # Reel-Extraktion, KI-Klassifizierung, DB-Logik
+├── package.json           # Dependencies und Scripts
+├── db.json                # Lokale JSON-Datenbank (Themen & Einträge)
+├── public/
+│   └── index.html         # Web-Dashboard
+└── .env                   # Environment Variables (nicht im Repo)
 ```
 
-### API Endpoints
+## Entwicklung
 
-- `POST /reel` - Add a new Instagram Reel URL
-- `GET /entries` - Retrieve all organized content
-- `GET /` - Serve the web dashboard
+```bash
+npm start   # Server starten
+npm test    # Tests ausführen (Platzhalter)
+```
 
-### Adding Features
+Der Code ist bewusst modular aufgebaut:
 
-The modular structure makes it easy to extend:
-- Add new content types in `descriptionHandle.js`
-- Customize the dashboard in `public/index.html`
-- Extend the API in `index.js`
+- Neue Content-Typen werden in `descriptionHandle.js` ergänzt
+- Das Dashboard lässt sich in `public/index.html` anpassen
+- Die API-Oberfläche wird in `index.js` erweitert
 
-## 🔒 Privacy & Security
+## Troubleshooting
 
-- All data stored locally on your machine
-- No external data sharing
-- API keys stored in environment variables
-- Instagram content accessed via public oEmbed API
+| Problem | Mögliche Ursache / Lösung |
+|---|---|
+| `Failed to extract reel description` | Die Reel-URL ist privat oder falsch formatiert – prüfen, ob sie öffentlich und korrekt ist |
+| `AI classification failed` | Ungültiger Gemini-API-Key oder keine Internetverbindung |
+| Datenbankfehler | `db.json` ist fehlerhaft formatiert oder es fehlen Dateiberechtigungen |
 
-## 🐛 Troubleshooting
+## Datenschutz & Sicherheit
 
-**Common Issues:**
+- Alle Daten werden lokal gespeichert; es findet keine Weitergabe an Dritte statt
+- API-Keys liegen ausschließlich in Environment Variables und werden nicht ins Repository committed
+- Instagram-Inhalte werden ausschließlich über die öffentliche oEmbed-API abgerufen
 
-1. **"Failed to extract reel description"**
-   - Check if the Instagram Reel URL is public
-   - Verify the URL format is correct
+## Lizenz
 
-2. **"AI classification failed"**
-   - Ensure your Gemini API key is valid
-   - Check your internet connection
-
-3. **"Database errors"**
-   - Verify `db.json` has proper JSON format
-   - Check file permissions
-
-## 📝 License
-
-ISC License - Feel free to use and modify for personal projects.
-
-## 🤝 Contributing
-
-This is a personal project, but feel free to suggest improvements or report issues!
+ISC-Lizenz. Freie Nutzung und Anpassung für private Projekte.
 
 ---
 
-**Built with ❤️ for personal knowledge management**
+Entwickelt von [@laurenzbiller](https://github.com/laurenzbiller)
